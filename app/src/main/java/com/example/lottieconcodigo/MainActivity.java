@@ -85,23 +85,7 @@ public class MainActivity extends AppCompatActivity {
                     ciclista.changeCharacter("cajas.json");
                 }
             };
-            PinchScaleDetector.PinchScaleListener hola =new PinchScaleDetector.PinchScaleListener() {
-                @Override public void onScale(ScaleGestureDetector scaleGestureDetector, boolean isScalingOut) {
-                    if (isScalingOut) {
-                       ciclista.changeSize(true);
-                    } else {
-                        ciclista.changeSize(false);
-                    }
-                }
 
-                @Override public void onScaleStart(ScaleGestureDetector scaleGestureDetector) {
-                    // Scaling Started
-                }
-
-                @Override public void onScaleEnd(ScaleGestureDetector scaleGestureDetector) {
-                    // Scaling Stopped
-                }
-            };
 
             TouchTypeDetector.TouchTypListener touchTypListener=new TouchTypeDetector.TouchTypListener() {
                 @Override public void onTwoFingerSingleTap() {
@@ -177,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
             viewGroup.addView(ciclista.ReproducirAnimacion(true, 1f));
             Sensey.getInstance().startShakeDetection(shakeListener);
             Sensey.getInstance().startFlipDetection(flipListener);
-           Sensey.getInstance().startPinchScaleDetection(this, hola);
+        g
             Sensey.getInstance().startTouchTypeDetection(this, touchTypListener);
             _t.scheduleAtFixedRate(new TimerTask() {
                 @Override
