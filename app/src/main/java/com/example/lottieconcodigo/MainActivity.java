@@ -29,6 +29,10 @@ import com.github.nisrulz.sensey.PinchScaleDetector;
 import com.github.nisrulz.sensey.Sensey;
 import com.github.nisrulz.sensey.ShakeDetector;
 import com.github.nisrulz.sensey.TouchTypeDetector;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.newtronlabs.easybluetooth.BluetoothClient;
 import com.newtronlabs.easybluetooth.BluetoothServer;
 import com.newtronlabs.easybluetooth.IBluetoothClient;
@@ -43,34 +47,33 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
+    FirebaseDatabase database = FirebaseDatabase.getInstance();
    private RelativeLayout viewGroup;
     Display display;
     Point size = new Point();
     Timer _t;
     Anima2 ciclista;
+    static final String pcicli = "bicicleta.json";
+    static final String pcajas = "cajas.json";
     int ciclistaX;
     int ciclistaY;
     boolean semueve = false;
     boolean caracter = false;
     int etapaCaja = 1;
-    String data;
-    String datareceived = "n";
-    IBluetoothClient btClient;
-    BluetoothKit bluetoothKit = new BluetoothKit();
+    String id = "n";
+    boolean espera = false;
+
+
     @Override public boolean dispatchTouchEvent(MotionEvent event) {
         // Setup onTouchEvent for detecting type of touch gesture
         Sensey.getInstance().setupDispatchTouchEvent(event);
         return super.dispatchTouchEvent(event);
     }
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         try{
-            bluetoothKit.enable();
             setContentView(R.layout.activity_main);
-            BluetoothDevice device = bluetoothKit.getDeviceByName("Nombre del otro dispositivo");
             Sensey.getInstance().init(this);
             super.onCreate(savedInstanceState);
             _t = new Timer();
@@ -78,89 +81,52 @@ public class MainActivity extends AppCompatActivity {
             display = getWindowManager().getDefaultDisplay();
             display.getSize(size);
             setContentView(viewGroup);
-            ciclista = new Anima2(this, "bicicleta.json",0,0, 250,250,size.x,size.y);
-
+            ciclista = new Anima2(this, pcicli,0,0, 250,250,size.x,size.y);
             ciclista.CortarAnimacionPorFrame(70,100);
-
             LottieAnimationView vistaCiclista = ciclista.ReproducirAnimacion(true,0.5f);
-            final IBluetoothServer btServer = new BluetoothServer.Builder(this.getApplicationContext(),
-                    "EasyBtService", ParcelUuid.fromString("00001101-0000-1000-8000-00805F9B34FB"))
-                    .build();
-
-            if(btServer == null)
-            {
-                // Server could not be created.
-            }
-            else
-            {
-                // Block until a client connects.
-                btClient = btServer.accept();
-                // Set a data callback to receive data from the remote device.
-                btClient.setDataCallback(new SampleDataCallback());
-                // Set a connection callback to be notified of connection changes.
-                btClient.setConnectionCallback(new SampleConnectionCallback());
-                // Set a data send callback to be notified when data is sent of fails to send.
-                btClient.setDataSentCallback(new SampleDataSentCallback());
-
-                btServer.disconnect();
-            }
-            IBluetoothClient client = new BluetoothClient.Builder(this.getApplication(), device, ParcelUuid.fromString("00001101-0000-1000-8000-00805F9B34FB"))
-                    // We want to be notified when connection completes.
-                    .setConnectionCallback(new SampleConnectionCallback())
-                    // Let's also get notified if it fails
-                    .setConnectionFailedListener(new SampleConnectionFailedListener())
-                    // Receive data from the server
-                    .setDataCallback(new SampleDataCallback())
-                    // Be notified when the data is sent to the server or fails to send.
-                    .setDataSentCallback(new SampleDataSentCallback())
-                    .build();
-            client.connect();
-            // Connect to server
-
-
-
-
+            if( readAest() == 0){
+                id = "a";
+                espera = false;
+                writeAest(1);
+            } else if( readBest() == 0 ){
+                id ="a2";
+                espera = true;
+                writeBest(1);
+            } ///else cerrar aplicación porque solo permite 2 la base de datos
             ShakeDetector.ShakeListener shakeListener=new ShakeDetector.ShakeListener() {
-                @Override public void onShakeDetected() {
-                   semueve = true;
+                @Override public void onShakeDetected(){ if(id=="a"){
+                   semueve = true;}
                 }
-
                 @Override public void onShakeStopped() {
                   semueve = false;
                 }
             };
             FlipDetector.FlipListener flipListener=new FlipDetector.FlipListener() {
-                @Override public void onFaceUp() {
-                    ciclista.changeCharacter("bicicleta.json");
+                @Override public void onFaceUp() { if(id == "a"){
+                    ciclista.changeCharacter(pcicli);}
                 }
-
-                @Override public void onFaceDown() {
-                    ciclista.changeCharacter("cajas.json");
+                @Override public void onFaceDown() { if (id =="a"){
+                    ciclista.changeCharacter(pcajas);}
                 }
             };
-
-
             TouchTypeDetector.TouchTypListener touchTypListener=new TouchTypeDetector.TouchTypListener() {
                 @Override public void onTwoFingerSingleTap() {
-                    // Two fingers single tap
                 }
-
                 @Override public void onThreeFingerSingleTap() {
-                    // Three fingers single tap
                 }
-
                 @Override public void onDoubleTap() {
+                    if(id=="a"){
                     caracter = !caracter;
                     if(caracter){
-                        ciclista.changeCharacter("cajas.json");
+                        ciclista.changeCharacter(pcajas);
                         ciclista.ReproducirAnimacion(true, 1f);
-                    }else{
-                        ciclista.changeCharacter("bicicleta.json");
+                    }else {
+                        ciclista.changeCharacter(pcicli);
                         ciclista.ReproducirAnimacion(true, 1f);
-                    }
+                    }                   }
                 }
-
                 @Override public void onScroll(int scrollDirection) {
+                    if(id=="a"){
                     switch (scrollDirection) {
                         case TouchTypeDetector.SCROLL_DIR_UP:
                             ciclista.y = ciclista.y - 3;
@@ -177,14 +143,12 @@ public class MainActivity extends AppCompatActivity {
                         default:
                             // Do nothing
                             break;
-                    }
+                    }}
                 }
-
                 @Override public void onSingleTap() {
-                    // Single tap
                 }
-
                 @Override public void onSwipe(int swipeDirection) {
+                    if(id=="a"){
                     switch (swipeDirection) {
                         case TouchTypeDetector.SWIPE_DIR_UP:
                             ciclista.y = ciclista.y - 200;
@@ -199,146 +163,194 @@ public class MainActivity extends AppCompatActivity {
                             ciclista.x = ciclista.x + 200;
                             break;
                         default:
-                            //do nothing
                             break;
-                    }
+                    }}
                 }
-
                 @Override public void onLongPress() {
-                    // Long press
                 }
             };
-
-
-
             viewGroup.addView(ciclista.ReproducirAnimacion(true, 1f));
             Sensey.getInstance().startShakeDetection(shakeListener);
             Sensey.getInstance().startFlipDetection(flipListener);
-
             Sensey.getInstance().startTouchTypeDetection(this, touchTypListener);
             _t.scheduleAtFixedRate(new TimerTask() {
                 @Override
                 public void run() {
-                    if(ciclista.y < 0 ){
-                        data = "u";
-                        semueve = false;
-                        ciclista.x = size.x + 100;
-                        ciclista.y = size.y + 100;
-                        btClient.sendData("data", data.getBytes());
-                    } else if(ciclista.y > size.y){
-                        data = "d";
-                        semueve = false;
-                        ciclista.x = size.x + 100;
-                        ciclista.y = size.y + 100;
-                        btClient.sendData("data", data.getBytes());
-                    } else if(ciclista.x < 0){
-                        data = "l";
-                        semueve = false;
-                        ciclista.x = size.x + 100;
-                        ciclista.y = size.y + 100;
-                        btClient.sendData("data", data.getBytes());
-                    } else if(ciclista.x > size.x){
-                        data = "r";
-                        semueve = false;
-                        ciclista.x = size.x + 100;
-                        ciclista.y = size.y + 100;
-                        btClient.sendData("data", data.getBytes());
-                    } else {
-                        data = "n";
-                    }
-                    if(datareceived != "n"){
-                        switch (datareceived) {
-                            case "u": ciclista.y = size.y; ciclista.x = size.x/2; break;
-                            case "d": ciclista.y = 0; ciclista.x = size.x/2; break;
-                            case "l": ciclista.x = size.x;  ciclista.y = size.y/2; break;
-                            case "r": ciclista.x = 0; ciclista.y = size.y/2; break;
-                            default:
-                                break;
+                    if(id=="a") {
+                        if(!espera){
+                            if (semueve) {
+                            ciclista.DesplazarAnimacion();
+                            }
+                            ciclista.setPosition();
+                            if(ciclista.x < 0 || ciclista.x > size.x || ciclista.y < 0 || ciclista.y > size.y){
+                                writeAx(ciclista.x);
+                                writeAy(ciclista.y);
+                                writeBx(0);
+                                writeBy(0);
+                                espera = true;
+                            }
+                        }else {
+                            int bx = readBx();
+                            if (bx != 0){
+                               ciclista.x =  bx < 0 ? bx + size.x : bx - size.x;
+                               int by = readBy();
+                               ciclista.y = by < 0 ? by + size.y : by - size.y;
+                               ciclista.setPosition();
+                               espera = false;
+                            }
+                        }
+                    }else if(id =="a2") {
+                        if(!espera){
+                            if (semueve) {
+                                ciclista.DesplazarAnimacion();
+                            }
+                            ciclista.setPosition();
+                            if(ciclista.x < 0 || ciclista.x > size.x || ciclista.y < 0 || ciclista.y > size.y){
+                                writeBx(ciclista.x);
+                                writeBy(ciclista.y);
+                                writeAx(0);
+                                writeAy(0);
+                                espera = true;
+                            }
+                        }else {
+                            int ax = readAx();
+                            if (ax != 0){
+                                ciclista.x =  ax < 0 ? ax + size.x : ax - size.x;
+                                int ay = readAy();
+                                ciclista.y = ay < 0 ? ay + size.y : ay - size.y;
+                                ciclista.setPosition();
+                                espera = false;
+                            }
                         }
                     }
-
-                   if(semueve) {
-                     ciclista.DesplazarAnimacion();
-                   }
-                    ciclista.setPosition();
-
                 }
             },0,5);
         }catch (Exception ex){
             Toast.makeText(this, ex.toString(), Toast.LENGTH_SHORT).show();
             throw ex;
         }
-
-
     }
-    public class SampleConnectionCallback implements IBluetoothConnectionCallback
-    {
-        public static final String TAG = "easyBt";
-        @Override
-        public void onConnected(IBluetoothClient bluetoothClient)
-        {
-            // Connection successful.
-            Log.d(TAG, "Connected to: " + bluetoothClient.getNodeId());
+    public void writeAest(int est){
+        database.getReference("a/est").setValue(est);
+    }
+    public void writeAx(int x){
+        database.getReference("a/x").setValue(x);
+    }
+    public void writeAy(int y){
+        database.getReference("a/y").setValue(y);
+    }
+    public void writeBest(int est){
+        database.getReference("b/est").setValue(est);
+    }
+    public void writeBx(int x){
+        database.getReference("b/x").setValue(x);
+    }
+    public void writeBy(int y){
+        database.getReference("b/y").setValue(y);
+    }
+    ///----------------------------------
+    public int readAest(){
+        final int[] val = new int[1];
+        database.getReference("a/est").addValueEventListener(new ValueEventListener() {
 
-            // We can start sending data now.
-            bluetoothClient.sendData("ClientGreeting", "Hello Server!!".getBytes());
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                // This method is called once with the initial value and again
+                // whenever data at this location is updated.
+                 val[0] = dataSnapshot.getValue(int.class);
 
-        }
-
-        @Override
-        public void onConnectionSuspended(IBluetoothClient bluetoothClient, int reason)
-        {
-            // Connection lost.
-            if(reason == REASON_CONNECTION_CLOSED)
-            {
-                Log.d(TAG, "Connection to :" +bluetoothClient.getNodeId() + " ended.");
             }
-        }
-    }
-
-    public class SampleConnectionFailedListener implements IBluetoothConnectionFailedListener
-    {
-        public static final String TAG = "easyBt";
-        @Override
-        public void onConnectionFailed(IBluetoothClient bluetoothClient, int i)
-        {
-            // Connection attempt failed.
-            Log.d(TAG, "Connection Failed!");
-        }
-    }
-
-    public class SampleDataCallback implements IBluetoothDataReceivedCallback
-    {
-        public static final String TAG = "easyBt";
-
-        @Override
-        public void onDataReceived(IBluetoothMessageEvent messageEvent)
-        {
-            // Data was received.
-            datareceived = messageEvent.getData().toString();
-        }
-    }
-    public class SampleDataSentCallback implements IBluetoothDataSentCallback
-    {
-        public static final String TAG = "easyBt";
-
-        @Override
-        public void onDataSent(IBluetoothClient bluetoothClient, IBluetoothMessageEvent messageEvent)
-        {
-            Log.d(TAG, "Data Sent: " + messageEvent.getTag() + " Data: " + new String(messageEvent.getData()));
-        }
-
-        @Override
-        public void onDataSendFailed(IBluetoothClient bluetoothClient, @SendFailureReason int failureReason)
-        {
-            if(failureReason == REASON_DATA_FORMAT_INVALID)
-            {
-                Log.d(TAG, "Failed to send data. Invalid Format");
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
             }
-            else if(failureReason == REASON_REMOTE_CONNECTION_CLOSED)
-            {
-                Log.d(TAG, "Failed to send data. Connection Lost.");
+        });
+        return val[0];
+    }
+    public int readAx(){
+        final int[] val = new int[1];
+        database.getReference("a/x").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                val[0] = dataSnapshot.getValue(int.class);
             }
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
+            }
+        });
+        return val[0];
+    }
+    public int readAy( ){
+        final int[] val = new int[1];
+        database.getReference("a/y").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                val[0] = dataSnapshot.getValue(int.class);
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
+            }
+        });
+        return val[0];
+    }
+    public int readBest(){
+        final int[] val = new int[1];
+        database.getReference("b/est").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                val[0] = dataSnapshot.getValue(int.class);
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
+            }
+        });
+        return val[0];
+    }
+    public int readBx(){
+        final int[] val = new int[1];
+        database.getReference("b/x").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                val[0] = dataSnapshot.getValue(int.class);
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
+            }
+        });
+        return val[0];
+    }
+    public int readBy(){
+        final int[] val = new int[1];
+        database.getReference("b/y").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                val[0] = dataSnapshot.getValue(int.class);
+            }
+            @Override
+            public void onCancelled(DatabaseError error) {
+                val[0] = 0;
+            }
+        });
+        return val[0];
+    }
+    @Override
+    protected void onStop() {
+        // call the superclass method first
+        super.onStop();
+        if(id == "a"){
+            writeAest(0);
+            writeAx(0);
+            writeAy(0);
         }
+        if(id == "a2"){
+            writeBest(0);
+            writeBx(0);
+            writeBy(0);
+        }
+
     }
 }

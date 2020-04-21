@@ -101,6 +101,9 @@ public class Anima2 {
         animacion.setX(this.x);
         animacion.setY(this.y);
     }
+    public void hide(){
+        animacion.setAnimation("");
+    }
 
     public void CortarAnimacionPorFrame(int minFrame, int maxFrame){
         animacion.setMinAndMaxFrame(minFrame,maxFrame);

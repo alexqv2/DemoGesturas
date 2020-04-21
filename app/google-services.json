@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "571070455513",
+    "firebase_url": "https://demog-9c4fa.firebaseio.com",
+    "project_id": "demog-9c4fa",
+    "storage_bucket": "demog-9c4fa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:571070455513:android:00c045d0f1fdea0170a8c8",
+        "android_client_info": {
+          "package_name": "com.example.lottieconcodigo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "571070455513-ct4ss5ue5kmkf9m1fbfeqs6fk0eldvp5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBl3zdmdoed9VuBbSA96Vt1GCigcA2KvlA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "571070455513-ct4ss5ue5kmkf9m1fbfeqs6fk0eldvp5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
