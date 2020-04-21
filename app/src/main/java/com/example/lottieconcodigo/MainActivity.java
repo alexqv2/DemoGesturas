@@ -188,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
                                 writeBx(0);
                                 writeBy(0);
                                 espera = true;
+                                ciclista.changeCharacter(pcajas);
                             }
                         }else {
                             int bx = readBx();
@@ -197,10 +198,12 @@ public class MainActivity extends AppCompatActivity {
                                ciclista.y = by < 0 ? by + size.y : by - size.y;
                                ciclista.setPosition();
                                espera = false;
+                               ciclista.changeCharacter(pcicli);
                             }
                         }
                     }else if(id =="a2") {
                         if(!espera){
+
                             if (semueve) {
                                 ciclista.DesplazarAnimacion();
                             }
@@ -211,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
                                 writeAx(0);
                                 writeAy(0);
                                 espera = true;
+                                ciclista.changeCharacter(pcajas);
                             }
                         }else {
                             int ax = readAx();
@@ -220,6 +224,7 @@ public class MainActivity extends AppCompatActivity {
                                 ciclista.y = ay < 0 ? ay + size.y : ay - size.y;
                                 ciclista.setPosition();
                                 espera = false;
+                                ciclista.changeCharacter(pcicli);
                             }
                         }
                     }
